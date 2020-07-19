@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/LeoDevPy/RoboYoutube/issues"
   },
-  "homepage": "https://github.com/LeoDevPy/RoboYoutube#readme"
+  "homepage": "https://github.com/LeoDevPy/RoboYoutube#readme",
+  "dependencies": {
+    "readline-sync": "^1.4.10"
+  }
 }
