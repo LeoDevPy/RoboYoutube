@@ -1,26 +1,48 @@
-const algorithmia = require('algorithmia') //importando o modulo para dentro do código 
+const algorithmia = require('algorithmia') //importando o modulo para dentro do cï¿½digo 
 const algorithmiaApiKey = require ('../robots/credentials/algorithmia.json').apiKey
-const sentenceBoundaryDetection = require('sbd') // biblioteca  para separar sentenças de um texto pontos por ex. 
+const sentenceBoundaryDetection = require('sbd') // biblioteca  para separar sentenï¿½as de um texto pontos por ex. 
+
+const watsonApiKey = require('../robots/credentials/watson-nlu.json').apiKeyy	 
+
+const NaturalLanguageUnderstandingV1 = require('watson-developer-cloud/natural-language-understanding/v1.js')
+ 
+var nlu = new NaturalLanguageUnderstandingV1({
+	  username:'lsouzadearau@dxc.com',
+	  password:'Leo135798',//
+	  iam_apikey_name: watsonApiKey,
+	  version: '2018-04-05',
+	  url: "https://gateway.watsonplatform.net/natural-language-understanding/api/" 
+})
+
+// const NaturalLanguageUnderstandingV1 = require('watson-developer-cloud/natural-language-understanding/v1.js')
+// const { IamAuthenticator } = require('ibm-watson/auth')
+
+// const nlu = new NaturalLanguageUnderstandingV1({
+//   authenticator: new IamAuthenticator({ apikey: watsonApiKey }),
+//   version: '2018-04-05',
+//   url: 'https://api.us-south.natural-language-understanding.watson.cloud.ibm.com/instances/1dee7bd2-ff3a-44db-b08f-a91a876c9d32'
+// })
 
 async function robot(content){
 	await fetchContentFromWikipedia(content)
 	sanitizeContent(content)						
 	breakContentIntoSentences(content)
-	// toda função assincrona retorna uma promessi. 
+	limitMaximumSentences(content)
+	// toda funï¿½ï¿½o assincrona retorna uma promessi. 
 	
 	async function fetchContentFromWikipedia(content){
-		// PASSOS PARA UTILIZAÇÃO DO ALGORITMO 
-		// 1 AUTENTICAÇÃO 
+		// PASSOS PARA UTILIZAï¿½ï¿½O DO ALGORITMO 
+		// 1 AUTENTICAï¿½ï¿½O 
 		// 2 DEFINE O ALGOTIMO 
 		// 3 EXECUTA O ALGORITMO 
 		// 4 RETORNA-SE O VALOR
 	
 		const algorithmiaAuthenticated = algorithmia(algorithmiaApiKey) // declarou um API KEY TEMPORARIA retorna uma instancia autenticada do algorithmia. Atraves dessa instancia chegaremos ao algoritmo. 
-		const wikipediaAlgorithm = algorithmiaAuthenticated.algo('web/WikipediaParser/0.1.2')// metodo algo para acesso atráves do link utilizado acima. Retorna uam instancia do metodo que é utilizado abaixo. 
-		const wikipediaResponde = await wikipediaAlgorithm.pipe(content.searchTerm) // usa-se o metodo pipi que aceita por parametro um conteudo que a gente quer buscar no Wikipedia. Passando o objeto searchTerm que será utilizado pelo algoritmo para passar o valor no buscador do wikipedia. A variavel que recebera será utilizada abaixo que tem como o metodo o get. 
-		const wikipediaContent = wikipediaResponde.get() // ao executar o metodo o conteudo do wikipedia cai dentro da variável 
+		const wikipediaAlgorithm = algorithmiaAuthenticated.algo('web/WikipediaParser/0.1.2')// metodo algo para acesso atrï¿½ves do link utilizado acima. Retorna uam instancia do metodo que ï¿½ utilizado abaixo. 
+		const wikipediaResponde = await wikipediaAlgorithm.pipe(content.searchTerm) // usa-se o metodo pipi que aceita por parametro um conteudo que a gente quer buscar no Wikipedia. Passando o objeto searchTerm que serï¿½ utilizado pelo algoritmo para passar o valor no buscador do wikipedia. A variavel que recebera serï¿½ utilizada abaixo que tem como o metodo o get. 
+		const wikipediaContent = wikipediaResponde.get() // ao executar o metodo o conteudo do wikipedia cai dentro da variï¿½vel 
 		
-		content.sourceContentOriginal = wikipediaContent.content // source para pegar somente o conteúdo dentro do content do wikipedia.
+		content.sourceContentOriginal = wikipediaContent.content // source para pegar somente o conteï¿½do dentro do content do wikipedia.
 	}
 	
 	// fazer a limpeza das linhas em branco 
@@ -41,7 +63,7 @@ async function robot(content){
 				return true
 			})
 
-			return withoutBlankLinesAndMarkdown.join(' ') // junta o texto e coloca um espaço na junção. metodo join. 
+			return withoutBlankLinesAndMarkdown.join(' ') // junta o texto e coloca um espaï¿½o na junï¿½ï¿½o. metodo join. 
 		}
 	}
 
@@ -61,6 +83,35 @@ async function robot(content){
 			})
 		})
 	}
+
+	function limitMaximumSentences(content){
+		content.sentences = content.sentences.slice(0, content.maximumSentences)
+	}
+
+	async function fetchKeywordsOfAllSentences(content){
+		for (const sentence of content.sentence) {
+			sentence.keywords = await fetchWatsonAndReturnKeywords(sentence.text)
+		}
+    }
+	async function fetchWatsonAndReturnKeywords(sentence){
+	      return new Promise((resolve, reject) =>{
+	        nlu.analyze({
+	             text:sentence,
+	             features:{
+	             keywords: {}
+	             }
+	        }, (error, response) => {
+	        if(error) {
+	             throw error
+	        }
+                const keywords = response.keywords.map((keyword) => {
+                     return keyword.text
+                })
+                resolve(keywords)
+	     })
+	})
+     }
+		
 }
 
 module.exports = robot
