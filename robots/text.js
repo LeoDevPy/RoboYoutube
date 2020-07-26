@@ -2,11 +2,11 @@ const algorithmia = require('algorithmia') //importando o modulo para dentro do 
 const algorithmiaApiKey = require ('../robots/credentials/algorithmia.json').apiKey
 const sentenceBoundaryDetection = require('sbd') // biblioteca  para separar senten�as de um texto pontos por ex. 
 
-const watsonApiKey = require('../robots/credentials/watson-nlu.json').apiKeyy	 
+const watsonApiKey = require('../robots/credentials/watson-nlu.json').apikey
 
 const NaturalLanguageUnderstandingV1 = require('watson-developer-cloud/natural-language-understanding/v1.js')
  
-var nlu = new NaturalLanguageUnderstandingV1({
+const nlu = new NaturalLanguageUnderstandingV1({
 	  username:'lsouzadearau@dxc.com',
 	  password:'Leo135798',//
 	  iam_apikey_name: watsonApiKey,
@@ -23,20 +23,26 @@ var nlu = new NaturalLanguageUnderstandingV1({
 //   url: 'https://api.us-south.natural-language-understanding.watson.cloud.ibm.com/instances/1dee7bd2-ff3a-44db-b08f-a91a876c9d32'
 // })
 
-async function robot(content){
+const state = require('./state.js')
+
+async function robot() {
+	const content = state.load()
+
 	await fetchContentFromWikipedia(content)
 	sanitizeContent(content)						
 	breakContentIntoSentences(content)
 	limitMaximumSentences(content)
+	await fetchKeywordsOfAllSentences(content)
+
+	state.save(content)
 	// toda fun��o assincrona retorna uma promessi. 
-	
-	async function fetchContentFromWikipedia(content){
-		// PASSOS PARA UTILIZA��O DO ALGORITMO 
+			// PASSOS PARA UTILIZA��O DO ALGORITMO 
 		// 1 AUTENTICA��O 
 		// 2 DEFINE O ALGOTIMO 
 		// 3 EXECUTA O ALGORITMO 
 		// 4 RETORNA-SE O VALOR
 	
+	async function fetchContentFromWikipedia(content){
 		const algorithmiaAuthenticated = algorithmia(algorithmiaApiKey) // declarou um API KEY TEMPORARIA retorna uma instancia autenticada do algorithmia. Atraves dessa instancia chegaremos ao algoritmo. 
 		const wikipediaAlgorithm = algorithmiaAuthenticated.algo('web/WikipediaParser/0.1.2')// metodo algo para acesso atr�ves do link utilizado acima. Retorna uam instancia do metodo que � utilizado abaixo. 
 		const wikipediaResponde = await wikipediaAlgorithm.pipe(content.searchTerm) // usa-se o metodo pipi que aceita por parametro um conteudo que a gente quer buscar no Wikipedia. Passando o objeto searchTerm que ser� utilizado pelo algoritmo para passar o valor no buscador do wikipedia. A variavel que recebera ser� utilizada abaixo que tem como o metodo o get. 
@@ -89,7 +95,7 @@ async function robot(content){
 	}
 
 	async function fetchKeywordsOfAllSentences(content){
-		for (const sentence of content.sentence) {
+		for (const sentence of content.sentences) {
 			sentence.keywords = await fetchWatsonAndReturnKeywords(sentence.text)
 		}
     }
